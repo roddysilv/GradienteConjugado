@@ -1,38 +1,59 @@
+/*
+Compilar :  gcc -o GradienteConjugado GradienteConjugado.c -lm
+Uso:        ./GradienteConjugado n min max precisao
+*/
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
 
-void imprimeMatriz(float **m, int n)
+void salvar_csv(double **m, double *b, double *x, int n)
 {
-  printf("Matrix: \n");
-  int i, j;
-  for (i = 0; i < n; i++)
+  FILE *A = fopen("A.csv", "w");
+  FILE *B = fopen("b.csv", "w");
+  FILE *X = fopen("x.csv", "w");
+
+  for (int i = 0; i < n; i++)
   {
-    for (j = 0; j < n; j++)
+    for (int j = 0; j < n; j++)
     {
-      printf("%0.2f ", m[i][j]);
+      if (j < n - 1)
+      {
+        fprintf(A, "%f,", m[i][j]);
+      }
+      else
+      {
+        fprintf(A, "%f", m[i][j]);
+      }
     }
-    printf("\n");
+    fprintf(A, "\n");
   }
-  printf("\n");
-}
 
-void imprimeVetor(float *a, int n)
-{
-  printf("Vetor: \n");
-  int i, j;
-  for (i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
   {
-    printf("%0.2f ", a[i]);
+    if (i < n - 1)
+    {
+      fprintf(B, "%f,", b[i]);
+      fprintf(X, "%f,", x[i]);
+    }
+    else
+    {
+      fprintf(B, "%f", b[i]);
+      fprintf(X, "%f", x[i]);
+    }
   }
-  printf("\n\n");
+
+  fclose(A);
+  fclose(B);
+  fclose(X);
 }
 
-float produtoVetorial(float *a, float *b, int n)
+
+double produtoVetorial(double *a, double *b, int n)
 {
   int i;
-  float r = 0;
+  double r = 0;
   for (i = 0; i < n; i++)
   {
     r += a[i] * b[i];
@@ -40,10 +61,10 @@ float produtoVetorial(float *a, float *b, int n)
   return r;
 }
 
-void transposta(float **a, int n)
+void transposta(double **a, int n)
 {
   int i, j;
-  float temp;
+  double temp;
 
   for (i = 0; i < n; i++)
   {
@@ -56,10 +77,10 @@ void transposta(float **a, int n)
   }
 }
 
-void produtoMatrizVetor(float **A, float *b, float *c, int n)
+void produtoMatrizVetor(double **A, double *b, double *c, int n)
 {
   int i, j;
-  float r;
+  double r;
   for (i = 0; i < n; i++)
   {
     r = 0;
@@ -71,15 +92,15 @@ void produtoMatrizVetor(float **A, float *b, float *c, int n)
   }
 }
 
-void mspd(float **a, int n)
+void mspd(double **a, int n)
 {
-  float **b = malloc(n * sizeof(float *));
-  float **id = malloc(n * sizeof(float *));
+  double **b = malloc(n * sizeof(double *));
+  double **id = malloc(n * sizeof(double *));
 
   for (int i = 0; i < n; i++)
   {
-    b[i] = malloc(n * sizeof(float));
-    id[i] = malloc(n * sizeof(float));
+    b[i] = malloc(n * sizeof(double));
+    id[i] = malloc(n * sizeof(double));
   }
 
   for (int i = 0; i < n; i++)
@@ -107,18 +128,27 @@ void mspd(float **a, int n)
       a[i][j] = a[i][j] * b[i][j] - id[i][j];
     }
   }
+
+  for (int i = 0; i < n; i++)
+  {
+    free(b[i]);
+    free(id[i]);
+  }
+
+  free(b);
+  free(id);
 }
 
-void gradienteConjugado(float **A, float *b, float *x, int n)
+void gradienteConjugado(double **A, double *b, double *x, int n, double precisao)
 {
-  int i;
+  int i, j;
 
-  float *r, *p, *c, *Ap;
+  double *r, *p, *c, *Ap;
 
-  r = (float *)malloc(n * sizeof(float));
-  p = (float *)malloc(n * sizeof(float));
-  c = (float *)malloc(n * sizeof(float));
-  Ap = (float *)malloc(n * sizeof(float));
+  r = (double *)malloc(n * sizeof(double));
+  p = (double *)malloc(n * sizeof(double));
+  c = (double *)malloc(n * sizeof(double));
+  Ap = (double *)malloc(n * sizeof(double));
 
   produtoMatrizVetor(A, x, c, n);
 
@@ -128,14 +158,18 @@ void gradienteConjugado(float **A, float *b, float *x, int n)
     p[i] = r[i];
   }
 
-  float rsold = produtoVetorial(r, r, n);
+  double rsold = produtoVetorial(r, r, n);
 
-  while (sqrt(produtoVetorial(r, r, n)) > 0.0001)
+  j = 0;
+
+  while (sqrt(produtoVetorial(r, r, n)) > precisao)
   {
+
+    j++;
 
     produtoMatrizVetor(A, p, Ap, n);
 
-    float alpha = rsold / (produtoVetorial(p, Ap, n));
+    double alpha = rsold / (produtoVetorial(p, Ap, n));
 
     for (i = 0; i < n; i++)
     {
@@ -144,7 +178,7 @@ void gradienteConjugado(float **A, float *b, float *x, int n)
       r[i] = r[i] - alpha * Ap[i];
     }
 
-    float rsnew = produtoVetorial(r, r, n);
+    double rsnew = produtoVetorial(r, r, n);
 
     for (i = 0; i < n; i++)
     {
@@ -158,52 +192,63 @@ void gradienteConjugado(float **A, float *b, float *x, int n)
   free(r);
   free(p);
   free(c);
+
+  printf("Iterações: %d\n", j);
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+  clock_t start, end;
 
-  int n = 45;
+  double cpu_time_used;
+
+  int n = strtol(argv[1], NULL, 10);
+
+  double precisao = strtol(argv[4], NULL, 10);
 
   int i, j;
 
-  srand(time(0));
+  //srand(time(0));
 
-  float **m = malloc(n * sizeof(float *));
-  
+  double **m = malloc(n * sizeof(double *));
+
   for (i = 0; i < n; i++)
   {
-    m[i] = malloc(n * sizeof(float));
+    m[i] = malloc(n * sizeof(double));
   }
 
-  float *x = (float *)malloc(n * sizeof(float));
-  float *b = (float *)malloc(n * sizeof(float));
+  double *x = (double *)malloc(n * sizeof(double));
+  double *b = (double *)malloc(n * sizeof(double));
 
   int min, max;
 
-  min = 0;
+  min = strtol(argv[2], NULL, 10);
 
-  max = 10;
+  max = strtol(argv[3], NULL, 10);
 
   for (i = 0; i < n; i++)
   {
-    b[i] = min + ((float)rand() / (float)(RAND_MAX)) * (max - (min));
+    b[i] = min + ((double)rand() / (double)(RAND_MAX)) * (max - (min));
     x[i] = 0;
     for (j = 0; j < n; j++)
     {
-      m[i][j] = min + ((float)rand() / (float)(RAND_MAX)) * (max - (min));
+      m[i][j] = min + ((double)rand() / (double)(RAND_MAX)) * (max - (min));
     }
   }
 
   mspd(m, n);
 
-  gradienteConjugado(m, b, x, n);
+  start = clock();
 
-  imprimeMatriz(m, n);
+  gradienteConjugado(m, b, x, n, precisao);
 
-  imprimeVetor(b, n);
+  end = clock();
 
-  imprimeVetor(x, n);
+  cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+
+  printf("t = %f s\n", cpu_time_used);
+
+  salvar_csv(m, b, x, n);
 
   for (i = 0; i < n; i++)
   {
